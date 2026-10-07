@@ -1,5 +1,6 @@
 package com.nbk.delivery_order.domain.order.entity;
 
+import com.nbk.delivery_order.domain.user.entity.User;
 import com.nbk.delivery_order.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
