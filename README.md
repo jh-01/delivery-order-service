@@ -234,8 +234,8 @@ Response `200 OK`
 ### 1. 회원
 | 기능       | Method | URL                       | 설명       |
 | -------- | ------ | ------------------------- | -------- |
-| 회원가입     | POST   | `/api/members`            | 회원 가입    |
-| 회원 단건 조회 | GET    | `/api/members/{memberId}` | 회원 정보 조회 |
+| 회원가입     | POST   | `/api/members`            | 회원 가입 (누구나) |
+| 회원 단건 조회 | GET    | `/api/members/{memberId}` | 회원 정보 조회 (로그인) |
 
 #### 회원가입
 
@@ -248,23 +248,43 @@ Request
 
 ```json
 {
-  "name": "홍길동",
-  "email": "hong@example.com",
+  "loginId": "customer01",
   "password": "password123",
   "role": "CUSTOMER"
 }
 ```
+
+| 필드         | 조건                     |
+| ---------- | ---------------------- |
+| `loginId`  | 필수, 4~20자, 중복 불가       |
+| `password` | 필수, 8자 이상 (최대 72자)     |
+| `role`     | 필수, `CUSTOMER` 또는 `OWNER` |
 
 Response `201 Created`
 
 ```json
 {
   "id": 1,
-  "name": "홍길동",
-  "email": "hong@example.com",
+  "loginId": "customer01",
   "role": "CUSTOMER"
 }
 ```
+
+> 비밀번호는 BCrypt로 해시해서 저장하고, 응답에는 담지 않습니다.
+
+| 상황               | 응답              |
+| ---------------- | --------------- |
+| 값이 비었거나 조건에 맞지 않음 | `400 Bad Request` |
+| 이미 있는 아이디        | `409 Conflict`  |
+
+#### 회원 단건 조회
+
+```http
+GET /api/members/1
+Authorization: Bearer {accessToken}
+```
+
+Response `200 OK`: 회원가입 응답과 같은 형식. 없는 회원이면 `404`
 
 ---
 
