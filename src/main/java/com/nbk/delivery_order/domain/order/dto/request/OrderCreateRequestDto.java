@@ -11,9 +11,6 @@ import java.util.List;
 
 public record OrderCreateRequestDto(
 
-        @NotNull(message = "고객 ID는 필수입니다.")
-        Long customerId,
-
         @NotBlank(message = "배송 주소는 필수입니다.")
         @Size(max = 300, message = "배송 주소는 300자 이하여야 합니다.")
         String deliveryAddress,

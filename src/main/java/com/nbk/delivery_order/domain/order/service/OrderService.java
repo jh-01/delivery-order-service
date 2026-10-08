@@ -34,9 +34,8 @@ public class OrderService {
     private final MenuRepository menuRepository;
 
     @Transactional
-    public OrderResponseDto createOrder(OrderCreateRequestDto request) {
-        // TODO: 로그인 구현 후 인증 정보에서 고객 조회
-        User customer = userRepository.findById(request.customerId())
+    public OrderResponseDto createOrder(Long userId, OrderCreateRequestDto request) {
+        User customer = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
 
         // 고객만 주문 가능
@@ -67,7 +66,6 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<OrderResponseDto> getOrders(Long userId) {
-        // TODO: 로그인 구현 후 인증 정보에서 회원 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
 
@@ -88,7 +86,6 @@ public class OrderService {
 
     @Transactional
     public void cancelOrder(Long orderId, Long userId) {
-        // TODO: 로그인 구현 후 인증 정보에서 회원 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
 
@@ -109,7 +106,6 @@ public class OrderService {
 
     @Transactional
     public void updateOrderStatus(Long orderId, Long userId, OrderStatusUpdateRequestDto request) {
-        // TODO: 로그인 구현 후 인증 정보에서 회원 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
 

@@ -28,7 +28,6 @@ public class PaymentService {
 
     @Transactional
     public PaymentResponseDto createPayment(Long userId, PaymentCreateRequestDto request) {
-        // TODO: 로그인 구현 후 인증 정보에서 회원 조회
         User user = findUser(userId);
         Order order = findOrder(request.orderId());
 
@@ -49,7 +48,6 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public PaymentResponseDto getPayment(Long paymentId, Long userId) {
-        // TODO: 로그인 구현 후 인증 정보에서 회원 조회
         User user = findUser(userId);
         Payment payment = findPayment(paymentId);
 
@@ -60,7 +58,6 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<PaymentResponseDto> getPaymentsByOrder(Long orderId, Long userId) {
-        // TODO: 로그인 구현 후 인증 정보에서 회원 조회
         User user = findUser(userId);
         Order order = findOrder(orderId);
 
@@ -73,7 +70,6 @@ public class PaymentService {
 
     @Transactional
     public void cancelPayment(Long paymentId, Long userId) {
-        // TODO: 로그인 구현 후 인증 정보에서 회원 조회
         User user = findUser(userId);
         Payment payment = findPayment(paymentId);
         Order order = payment.getOrder();

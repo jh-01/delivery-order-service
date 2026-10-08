@@ -9,8 +9,10 @@ import com.nbk.delivery_order.domain.user.entity.Role;
 import com.nbk.delivery_order.domain.user.entity.User;
 import com.nbk.delivery_order.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -22,8 +24,8 @@ public class MenuService {
     private final UserRepository userRepository;
 
     @Transactional
-    public MenuResponse addMenu(MenuCreateRequestDto request){
-        User owner = userRepository.findById(request.ownerId())
+    public MenuResponse addMenu(Long userId, MenuCreateRequestDto request){
+        User owner = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
 
         // 사장님만 메뉴 등록 가능
@@ -52,22 +54,29 @@ public class MenuService {
     }
 
     @Transactional
-    public MenuResponse updateMenu(Long menuId, MenuUpdateRequestDto request){
+    public MenuResponse updateMenu(Long menuId, Long userId, MenuUpdateRequestDto request){
         Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
 
-        // TODO: 로그인 구현 후 메뉴 소유자만 수정 가능하도록 권한 확인
+        validateMenuOwner(menu, userId);
         menu.update(request.name(), request.price(), request.description());
 
         return MenuResponse.from(menu);
     }
 
     @Transactional
-    public void deleteMenu(Long menuId) {
+    public void deleteMenu(Long menuId, Long userId) {
         Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
 
-        // TODO: 로그인 구현 후 메뉴 소유자만 삭제 가능하도록 권한 확인
+        validateMenuOwner(menu, userId);
         menu.delete();
+    }
+
+    // 본인 메뉴만 수정·삭제 가능
+    private void validateMenuOwner(Menu menu, Long userId) {
+        if (!menu.getOwner().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 메뉴만 수정·삭제할 수 있습니다.");
+        }
     }
 }
