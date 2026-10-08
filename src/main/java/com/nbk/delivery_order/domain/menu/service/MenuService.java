@@ -1,0 +1,82 @@
+package com.nbk.delivery_order.domain.menu.service;
+
+import com.nbk.delivery_order.domain.menu.dto.request.MenuCreateRequestDto;
+import com.nbk.delivery_order.domain.menu.dto.request.MenuUpdateRequestDto;
+import com.nbk.delivery_order.domain.menu.dto.response.MenuResponse;
+import com.nbk.delivery_order.domain.menu.entity.Menu;
+import com.nbk.delivery_order.domain.menu.repository.MenuRepository;
+import com.nbk.delivery_order.domain.user.entity.Role;
+import com.nbk.delivery_order.domain.user.entity.User;
+import com.nbk.delivery_order.domain.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class MenuService {
+
+    private final MenuRepository menuRepository;
+    private final UserRepository userRepository;
+
+    @Transactional
+    public MenuResponse addMenu(Long userId, MenuCreateRequestDto request){
+        User owner = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
+
+        // 사장님만 메뉴 등록 가능
+        if (owner.getRole() != Role.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
+        }
+
+        Menu menu = Menu.of(owner, request.name(), request.price(), request.description());
+
+        return MenuResponse.from(menuRepository.save(menu));
+    }
+
+    @Transactional(readOnly = true)
+    public List<MenuResponse> getMenus() {
+        return menuRepository.findAllByDeletedFalse().stream()
+                .map(MenuResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public MenuResponse getMenu(Long menuId) {
+        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."));
+
+        return MenuResponse.from(menu);
+    }
+
+    @Transactional
+    public MenuResponse updateMenu(Long menuId, Long userId, MenuUpdateRequestDto request){
+        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."));
+
+        validateMenuOwner(menu, userId);
+        menu.update(request.name(), request.price(), request.description());
+
+        return MenuResponse.from(menu);
+    }
+
+    @Transactional
+    public void deleteMenu(Long menuId, Long userId) {
+        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."));
+
+        validateMenuOwner(menu, userId);
+        menu.delete();
+    }
+
+    // 본인 메뉴만 수정·삭제 가능
+    private void validateMenuOwner(Menu menu, Long userId) {
+        if (!menu.getOwner().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 메뉴만 수정·삭제할 수 있습니다.");
+        }
+    }
+}
