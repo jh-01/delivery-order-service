@@ -68,25 +68,6 @@ public class PaymentService {
                 .toList();
     }
 
-    @Transactional
-    public void cancelPayment(Long paymentId, Long userId) {
-        User user = findUser(userId);
-        Payment payment = findPayment(paymentId);
-        Order order = payment.getOrder();
-
-        // 고객 본인 주문의 결제만 취소 가능
-        if (!isOrderCustomer(user, order)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 결제만 취소할 수 있습니다.");
-        }
-
-        if (!payment.isCancelable() || !order.isPaymentCancelable()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "주문 수락 전 결제완료 상태에서만 취소할 수 있습니다.");
-        }
-
-        payment.cancel();
-        order.cancelPayment();
-    }
-
     // 고객은 본인 주문, 사장님은 본인 메뉴가 들어간 주문의 결제만 조회 가능
     private void validateReadable(User user, Order order) {
         boolean readable = switch (user.getRole()) {

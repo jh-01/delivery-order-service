@@ -8,6 +8,7 @@ import com.nbk.delivery_order.domain.order.dto.request.OrderStatusUpdateRequestD
 import com.nbk.delivery_order.domain.order.dto.response.OrderResponseDto;
 import com.nbk.delivery_order.domain.order.entity.Order;
 import com.nbk.delivery_order.domain.order.entity.OrderMenu;
+import com.nbk.delivery_order.domain.order.entity.OrderStatus;
 import com.nbk.delivery_order.domain.order.repository.OrderMenuRepository;
 import com.nbk.delivery_order.domain.order.repository.OrderRepository;
 import com.nbk.delivery_order.domain.user.entity.Role;
@@ -84,16 +85,28 @@ public class OrderService {
                 .toList();
     }
 
+    // 고객은 주문 취소만, 사장님은 주문 수락·배달 완료만 가능
     @Transactional
-    public void cancelOrder(Long orderId, Long userId) {
+    public void updateOrderStatus(Long orderId, Long userId, OrderStatusUpdateRequestDto request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다."));
 
+        switch (user.getRole()) {
+            case CUSTOMER -> cancelOrder(order, user, request.status());
+            case OWNER -> changeStatusByOwner(order, user, request.status());
+        }
+    }
+
+    private void cancelOrder(Order order, User customer, OrderStatus nextStatus) {
+        if (nextStatus != OrderStatus.ORDER_CANCELED) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "고객은 주문 취소만 할 수 있습니다.");
+        }
+
         // 고객 본인 주문만 취소 가능
-        if (user.getRole() != Role.CUSTOMER || !order.getCustomer().getId().equals(user.getId())) {
+        if (!order.getCustomer().getId().equals(customer.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 주문만 취소할 수 있습니다.");
         }
 
@@ -104,23 +117,16 @@ public class OrderService {
         order.cancel();
     }
 
-    @Transactional
-    public void updateOrderStatus(Long orderId, Long userId, OrderStatusUpdateRequestDto request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다."));
-
+    private void changeStatusByOwner(Order order, User owner, OrderStatus nextStatus) {
         // 사장님 본인 메뉴가 들어간 주문만 변경 가능
-        if (user.getRole() != Role.OWNER || !orderMenuRepository.existsByOrder_IdAndMenu_Owner_Id(orderId, user.getId())) {
+        if (!orderMenuRepository.existsByOrder_IdAndMenu_Owner_Id(order.getId(), owner.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 메뉴가 포함된 주문만 변경할 수 있습니다.");
         }
 
-        if (!order.canChangeStatusTo(request.status())) {
+        if (!order.canChangeStatusTo(nextStatus)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "변경할 수 없는 주문 상태입니다.");
         }
 
-        order.changeStatus(request.status());
+        order.changeStatus(nextStatus);
     }
 }
