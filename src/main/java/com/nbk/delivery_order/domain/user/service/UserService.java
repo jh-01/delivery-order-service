@@ -5,9 +5,11 @@ import com.nbk.delivery_order.domain.user.dto.response.UserResponseDto;
 import com.nbk.delivery_order.domain.user.entity.User;
 import com.nbk.delivery_order.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -19,7 +21,7 @@ public class UserService {
     public UserResponseDto signUp(UserSignUpRequestDto request) {
         // 아이디 중복 확인
         if (userRepository.existsByLoginId(request.loginId())) {
-            throw new IllegalArgumentException("중복된 아이디가 존재합니다.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "중복된 아이디가 존재합니다.");
         }
 
         // 사용자 등록
@@ -32,7 +34,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponseDto getUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
 
         return UserResponseDto.from(user);
     }

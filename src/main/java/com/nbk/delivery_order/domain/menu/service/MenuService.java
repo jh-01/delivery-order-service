@@ -26,11 +26,11 @@ public class MenuService {
     @Transactional
     public MenuResponse addMenu(Long userId, MenuCreateRequestDto request){
         User owner = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
 
         // 사장님만 메뉴 등록 가능
         if (owner.getRole() != Role.OWNER) {
-            throw new IllegalArgumentException("권한이 없습니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
         }
 
         Menu menu = Menu.of(owner, request.name(), request.price(), request.description());
@@ -48,7 +48,7 @@ public class MenuService {
     @Transactional(readOnly = true)
     public MenuResponse getMenu(Long menuId) {
         Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."));
 
         return MenuResponse.from(menu);
     }
@@ -56,7 +56,7 @@ public class MenuService {
     @Transactional
     public MenuResponse updateMenu(Long menuId, Long userId, MenuUpdateRequestDto request){
         Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."));
 
         validateMenuOwner(menu, userId);
         menu.update(request.name(), request.price(), request.description());
@@ -67,7 +67,7 @@ public class MenuService {
     @Transactional
     public void deleteMenu(Long menuId, Long userId) {
         Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."));
 
         validateMenuOwner(menu, userId);
         menu.delete();

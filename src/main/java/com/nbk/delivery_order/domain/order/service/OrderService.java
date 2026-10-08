@@ -36,11 +36,11 @@ public class OrderService {
     @Transactional
     public OrderResponseDto createOrder(Long userId, OrderCreateRequestDto request) {
         User customer = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
 
         // 고객만 주문 가능
         if (customer.getRole() != Role.CUSTOMER) {
-            throw new IllegalArgumentException("권한이 없습니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
         }
 
         // 총 가격은 서버에서 메뉴 가격 기준으로 계산
@@ -48,7 +48,7 @@ public class OrderService {
         List<Menu> menus = new ArrayList<>();
         for (OrderMenuRequest orderMenu : request.orderMenus()) {
             Menu menu = menuRepository.findByIdAndDeletedFalse(orderMenu.menuId())
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."));
             totalPrice += menu.getPrice() * orderMenu.quantity();
             menus.add(menu);
         }
@@ -67,7 +67,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<OrderResponseDto> getOrders(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
 
         // 고객은 본인 주문, 사장님은 본인 메뉴가 들어간 주문
         List<OrderMenu> orderMenus = switch (user.getRole()) {
