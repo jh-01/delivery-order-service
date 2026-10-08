@@ -2,24 +2,29 @@ package com.nbk.delivery_order.global.config;
 
 import com.nbk.delivery_order.global.security.JwtAuthenticationFilter;
 import com.nbk.delivery_order.global.security.JwtProvider;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 @Configuration
-@RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtProvider jwtProvider;
+    private final HandlerExceptionResolver handlerExceptionResolver;
+
+    public SecurityConfig(JwtProvider jwtProvider,
+                          @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
+        this.jwtProvider = jwtProvider;
+        this.handlerExceptionResolver = handlerExceptionResolver;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -33,9 +38,12 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // 토큰이 없거나 유효하지 않으면 401, 역할이 맞지 않으면 403
+                // 필터에서 발생한 401·403도 GlobalExceptionHandler에서 같은 형식으로 응답하도록 위임
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                        .authenticationEntryPoint((request, response, e) ->
+                                handlerExceptionResolver.resolveException(request, response, null, e))
+                        .accessDeniedHandler((request, response, e) ->
+                                handlerExceptionResolver.resolveException(request, response, null, e)))
                 .authorizeHttpRequests(auth -> auth
                         // 누구나
                         .requestMatchers(HttpMethod.POST, "/api/members", "/api/auth/login").permitAll()
