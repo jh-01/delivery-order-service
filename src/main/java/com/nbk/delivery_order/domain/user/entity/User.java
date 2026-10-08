@@ -25,4 +25,14 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role;
+
+    private User(String loginId, String password, Role role){
+        this.loginId = loginId;
+        this.password = password;
+        this.role = role;
+    }
+
+    public static User of(String loginId, String password, Role role){
+        return new User(loginId, password, role);
+    }
 }
