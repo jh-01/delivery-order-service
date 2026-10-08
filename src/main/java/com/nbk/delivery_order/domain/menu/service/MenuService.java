@@ -61,4 +61,13 @@ public class MenuService {
 
         return MenuResponse.from(menu);
     }
+
+    @Transactional
+    public void deleteMenu(Long menuId) {
+        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
+
+        // TODO: 로그인 구현 후 메뉴 소유자만 삭제 가능하도록 권한 확인
+        menu.delete();
+    }
 }

@@ -37,4 +37,10 @@ public class MenuController {
     public ResponseEntity<MenuResponse> updateMenu(@PathVariable Long menuId, @Valid @RequestBody MenuUpdateRequestDto request){
         return ResponseEntity.ok(menuService.updateMenu(menuId, request));
     }
+
+    @DeleteMapping("/{menuId}")
+    public ResponseEntity<Void> deleteMenu(@PathVariable Long menuId){
+        menuService.deleteMenu(menuId);
+        return ResponseEntity.noContent().build();
+    }
 }
