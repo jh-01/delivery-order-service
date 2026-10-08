@@ -41,4 +41,13 @@ public class Order extends BaseEntity {
     public static Order of(User customer, String deliveryAddress, Long totalPrice) {
         return new Order(customer, deliveryAddress, totalPrice);
     }
+
+    // 주문요청 상태일 때만 취소 가능
+    public boolean isCancelable() {
+        return this.status == OrderStatus.ORDER_REQUESTED;
+    }
+
+    public void cancel() {
+        this.status = OrderStatus.ORDER_CANCELED;
+    }
 }

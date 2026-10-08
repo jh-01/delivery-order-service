@@ -13,8 +13,10 @@ import com.nbk.delivery_order.domain.user.entity.Role;
 import com.nbk.delivery_order.domain.user.entity.User;
 import com.nbk.delivery_order.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -81,5 +83,26 @@ public class OrderService {
         return orderMenusByOrder.entrySet().stream()
                 .map(entry -> OrderResponseDto.from(entry.getKey(), entry.getValue()))
                 .toList();
+    }
+
+    @Transactional
+    public void cancelOrder(Long orderId, Long userId) {
+        // TODO: 로그인 구현 후 인증 정보에서 회원 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다."));
+
+        // 고객 본인 주문만 취소 가능
+        if (user.getRole() != Role.CUSTOMER || !order.getCustomer().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 주문만 취소할 수 있습니다.");
+        }
+
+        if (!order.isCancelable()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "주문요청 상태에서만 취소할 수 있습니다.");
+        }
+
+        order.cancel();
     }
 }
