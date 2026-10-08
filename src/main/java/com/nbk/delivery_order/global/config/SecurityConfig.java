@@ -36,6 +36,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/orders").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/orders/*/cancel").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/orders/*/status").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 );

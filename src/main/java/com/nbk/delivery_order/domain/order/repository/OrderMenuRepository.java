@@ -17,4 +17,7 @@ public interface OrderMenuRepository extends JpaRepository<OrderMenu, Long> {
     // 사장님 본인 메뉴가 들어간 주문 메뉴
     @EntityGraph(attributePaths = {"order", "menu"})
     List<OrderMenu> findAllByMenu_Owner_IdOrderByOrder_IdDesc(Long ownerId);
+
+    // 주문에 사장님 본인 메뉴가 들어있는지 여부
+    boolean existsByOrder_IdAndMenu_Owner_Id(Long orderId, Long ownerId);
 }

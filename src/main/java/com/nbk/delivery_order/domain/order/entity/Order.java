@@ -50,4 +50,14 @@ public class Order extends BaseEntity {
     public void cancel() {
         this.status = OrderStatus.ORDER_CANCELED;
     }
+
+    // 결제완료 → 주문수락, 주문수락 → 배달완료만 허용
+    public boolean canChangeStatusTo(OrderStatus nextStatus) {
+        return (this.status == OrderStatus.PAYMENT_COMPLETED && nextStatus == OrderStatus.ORDER_ACCEPTED)
+                || (this.status == OrderStatus.ORDER_ACCEPTED && nextStatus == OrderStatus.DELIVERY_COMPLETED);
+    }
+
+    public void changeStatus(OrderStatus nextStatus) {
+        this.status = nextStatus;
+    }
 }

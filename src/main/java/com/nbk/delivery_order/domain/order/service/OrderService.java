@@ -4,6 +4,7 @@ import com.nbk.delivery_order.domain.menu.entity.Menu;
 import com.nbk.delivery_order.domain.menu.repository.MenuRepository;
 import com.nbk.delivery_order.domain.order.dto.request.OrderCreateRequestDto;
 import com.nbk.delivery_order.domain.order.dto.request.OrderCreateRequestDto.OrderMenuRequest;
+import com.nbk.delivery_order.domain.order.dto.request.OrderStatusUpdateRequestDto;
 import com.nbk.delivery_order.domain.order.dto.response.OrderResponseDto;
 import com.nbk.delivery_order.domain.order.entity.Order;
 import com.nbk.delivery_order.domain.order.entity.OrderMenu;
@@ -104,5 +105,26 @@ public class OrderService {
         }
 
         order.cancel();
+    }
+
+    @Transactional
+    public void updateOrderStatus(Long orderId, Long userId, OrderStatusUpdateRequestDto request) {
+        // TODO: 로그인 구현 후 인증 정보에서 회원 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."));
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다."));
+
+        // 사장님 본인 메뉴가 들어간 주문만 변경 가능
+        if (user.getRole() != Role.OWNER || !orderMenuRepository.existsByOrder_IdAndMenu_Owner_Id(orderId, user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 메뉴가 포함된 주문만 변경할 수 있습니다.");
+        }
+
+        if (!order.canChangeStatusTo(request.status())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "변경할 수 없는 주문 상태입니다.");
+        }
+
+        order.changeStatus(request.status());
     }
 }
