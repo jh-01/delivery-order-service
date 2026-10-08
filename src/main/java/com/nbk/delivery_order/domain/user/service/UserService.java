@@ -28,4 +28,12 @@ public class UserService {
 
         return UserResponseDto.from(userRepository.save(user));
     }
+
+    @Transactional(readOnly = true)
+    public UserResponseDto getUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+
+        return UserResponseDto.from(user);
+    }
 }
