@@ -118,6 +118,11 @@ public class OrderService {
     }
 
     private void changeStatusByOwner(Order order, User owner, OrderStatus nextStatus) {
+        // 주문 취소는 고객만 가능
+        if (nextStatus == OrderStatus.ORDER_CANCELED) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사장님은 주문을 취소할 수 없습니다.");
+        }
+
         // 사장님 본인 메뉴가 들어간 주문만 변경 가능
         if (!orderMenuRepository.existsByOrder_IdAndMenu_Owner_Id(order.getId(), owner.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 메뉴가 포함된 주문만 변경할 수 있습니다.");
