@@ -220,10 +220,11 @@ Request
 ```json
 {
   "orderId": 1,
-  "amount": 16000,
   "paymentMethod": "CARD"
 }
 ```
+
+> 결제 금액은 서버에서 주문의 총 가격(`totalPrice`)으로 결정합니다.
 
 Response `201 Created`
 

@@ -37,6 +37,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/orders").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/orders/*/cancel").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/orders/*/status").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/payments").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/payments/*", "/api/orders/*/payments").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/payments/*/cancel").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 );
