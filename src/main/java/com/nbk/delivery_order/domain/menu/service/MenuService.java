@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class MenuService {
@@ -31,5 +33,20 @@ public class MenuService {
         Menu menu = Menu.of(owner, request.name(), request.price(), request.description());
 
         return MenuResponse.from(menuRepository.save(menu));
+    }
+
+    @Transactional(readOnly = true)
+    public List<MenuResponse> getMenus() {
+        return menuRepository.findAllByDeletedFalse().stream()
+                .map(MenuResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public MenuResponse getMenu(Long menuId) {
+        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
+
+        return MenuResponse.from(menu);
     }
 }
