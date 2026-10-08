@@ -56,6 +56,6 @@ public class OrderService {
         }
         orderMenuRepository.saveAll(orderMenus);
 
-        return OrderResponseDto.from(order);
+        return OrderResponseDto.from(order, orderMenus);
     }
 }
