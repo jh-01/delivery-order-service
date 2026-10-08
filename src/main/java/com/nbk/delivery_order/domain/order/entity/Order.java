@@ -60,16 +60,6 @@ public class Order extends BaseEntity {
         this.status = OrderStatus.PAYMENT_COMPLETED;
     }
 
-    // 사장님이 주문을 수락하기 전(결제완료 상태)에만 결제 취소 가능
-    public boolean isPaymentCancelable() {
-        return this.status == OrderStatus.PAYMENT_COMPLETED;
-    }
-
-    // 결제 취소 시 다시 결제할 수 있도록 주문요청 상태로 되돌림
-    public void cancelPayment() {
-        this.status = OrderStatus.ORDER_REQUESTED;
-    }
-
     // 결제완료 → 주문수락, 주문수락 → 배달완료만 허용
     public boolean canChangeStatusTo(OrderStatus nextStatus) {
         return (this.status == OrderStatus.PAYMENT_COMPLETED && nextStatus == OrderStatus.ORDER_ACCEPTED)

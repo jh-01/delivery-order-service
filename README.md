@@ -16,12 +16,10 @@
 | 메뉴  | DELETE | `/api/menus/{menuId}`              | 메뉴 삭제    |
 | 주문  | POST   | `/api/orders`                      | 주문 생성    |
 | 주문  | GET    | `/api/orders`                      | 주문 목록    |
-| 주문  | GET    | `/api/orders/{orderId}`            | 주문 조회    |
-| 주문  | PATCH  | `/api/orders/{orderId}/cancel`     | 주문 취소    |
+| 주문  | PATCH  | `/api/orders/{orderId}/status`     | 주문 취소·상태 변경 |
 | 결제  | POST   | `/api/payments`                    | 결제       |
 | 결제  | GET    | `/api/payments/{paymentId}`        | 결제 조회    |
-| 결제  | GET    | `/api/orders/{orderId}/payments`   | 결제 이력 조회 |
-| 결제  | PATCH  | `/api/payments/{paymentId}/cancel` | 결제 취소    |
+| 결제  | GET    | `/api/orders/{orderId}/payments`   | 주문별 결제 조회 |
 
 ## API 명세
 
@@ -41,8 +39,8 @@ Authorization: Bearer {accessToken}
 
 | 역할       | 가능한 API                                    |
 | -------- | ------------------------------------------ |
-| CUSTOMER | 주문 생성·취소, 결제 요청·취소                         |
-| OWNER    | 메뉴 등록·수정·삭제, 주문 상태 변경                      |
+| CUSTOMER | 주문 생성·취소, 결제 요청                            |
+| OWNER    | 메뉴 등록·수정·삭제, 주문 상태 변경(수락·배달완료)              |
 | 공통 (로그인) | 회원 조회, 주문 목록 조회, 결제 조회·이력 조회                |
 
 #### 로그인
@@ -176,41 +174,52 @@ Response `200 OK`
 ---
 
 ## 3. 주문
-| 기능       | Method | URL                            | 설명       |
-| -------- | ------ | ------------------------------ | -------- |
-| 주문 생성    | POST   | `/api/orders`                  | 주문 생성    |
-| 주문 목록 조회 | GET    | `/api/orders`                  | 주문 목록 조회 |
-| 주문 단건 조회 | GET    | `/api/orders/{orderId}`        | 주문 상세 조회 |
-| 주문 취소    | PATCH  | `/api/orders/{orderId}/cancel` | 주문 취소    |
+
+```text
+ORDER_REQUESTED → PAYMENT_COMPLETED → ORDER_ACCEPTED → DELIVERY_COMPLETED
+       ↓
+ORDER_CANCELED (결제 전에만 가능)
+```
+
+| 기능          | Method | URL                            | 설명                     |
+| ----------- | ------ | ------------------------------ | ---------------------- |
+| 주문 생성       | POST   | `/api/orders`                  | 주문 생성 (CUSTOMER)       |
+| 주문 목록 조회    | GET    | `/api/orders`                  | 고객은 본인 주문, 사장님은 본인 메뉴 주문 |
+| 주문 취소·상태 변경 | PATCH  | `/api/orders/{orderId}/status` | 고객은 취소, 사장님은 수락·배달완료    |
 
 ### 주문 생성
 
 ```http
 POST /api/orders
 Content-Type: application/json
+Authorization: Bearer {accessToken}
 ```
 
 Request
 
 ```json
 {
-  "memberId": 1,
-  "menuId": 1,
-  "quantity": 2
+  "deliveryAddress": "서울시 강남구 테헤란로 123",
+  "orderMenus": [
+    { "menuId": 1, "quantity": 2 }
+  ]
 }
 ```
+
+> 주문자는 토큰에서 꺼내고, 총액은 서버가 메뉴 가격 × 수량으로 계산합니다.
 
 Response `201 Created`
 
 ```json
 {
   "id": 1,
-  "memberId": 1,
-  "menuId": 1,
-  "quantity": 2,
-  "totalPrice": 16000,
-  "status": "ORDERED",
-  "createdAt": "2026-10-08T10:00:00"
+  "customerId": 2,
+  "deliveryAddress": "서울시 강남구 테헤란로 123",
+  "totalPrice": 36000,
+  "status": "ORDER_REQUESTED",
+  "orderMenus": [
+    { "menuId": 1, "menuName": "후라이드 치킨", "quantity": 2 }
+  ]
 }
 ```
 
@@ -218,41 +227,45 @@ Response `201 Created`
 
 ```http
 GET /api/orders
+Authorization: Bearer {accessToken}
 ```
 
-Response:
+Response `200 OK`: 주문 생성 응답과 같은 형식의 배열 (최신 주문 순)
+
+### 주문 취소·상태 변경
+
+```http
+PATCH /api/orders/{orderId}/status
+Content-Type: application/json
+Authorization: Bearer {accessToken}
+```
+
+Request
 
 ```json
-[
-  {
-    "id": 1,
-    "memberId": 1,
-    "menuId": 1,
-    "quantity": 2,
-    "totalPrice": 16000,
-    "status": "ORDERED",
-    "createdAt": "2026-10-08T10:00:00"
-  }
-]
+{ "status": "ORDER_CANCELED" }
 ```
+
+| 요청자      | 허용되는 변경                                              | 거절                                  |
+| -------- | ---------------------------------------------------- | ----------------------------------- |
+| CUSTOMER | 본인 주문 `ORDER_REQUESTED` → `ORDER_CANCELED`           | 남의 주문·취소 외 상태 `403`, 결제 후 취소 `409` |
+| OWNER    | 본인 메뉴 주문 `PAYMENT_COMPLETED` → `ORDER_ACCEPTED` → `DELIVERY_COMPLETED` | 남의 메뉴 주문 `403`, 그 외 변경 `409`        |
+
+Response `204 No Content`
 
 ---
 
 ## 4. 결제
 
-```text
-PENDING
-COMPLETED
-CANCELED
-FAILED
-```
+| 기능           | Method | URL                              | 설명           |
+| ------------ | ------ | -------------------------------- | ------------ |
+| 결제 요청        | POST   | `/api/payments`                  | 주문 결제 (CUSTOMER) |
+| 결제 내역 조회     | GET    | `/api/payments/{paymentId}`      | 결제 단건 조회     |
+| 주문별 결제 내역 조회 | GET    | `/api/orders/{orderId}/payments` | 주문의 결제 내역 조회 |
 
-| 기능           | Method | URL                                | 설명           |
-| ------------ | ------ | ---------------------------------- | ------------ |
-| 결제 요청        | POST   | `/api/payments`                    | 주문 결제        |
-| 결제 내역 조회     | GET    | `/api/payments/{paymentId}`        | 결제 단건 조회     |
-| 주문별 결제 내역 조회 | GET    | `/api/orders/{orderId}/payments`   | 주문의 결제 이력 조회 |
-| 결제 취소        | PATCH  | `/api/payments/{paymentId}/cancel` | 결제 취소        |
+- 결제 수단은 `CARD`만 받습니다. 그 외 값은 `400`
+- `ORDER_REQUESTED` 상태의 주문만 결제할 수 있고, 결제하면 주문이 `PAYMENT_COMPLETED`가 됩니다.
+- 주문 하나에 결제는 한 번만 가능합니다. 중복 결제는 `409`이고, 동시에 들어온 요청도 DB unique 제약으로 막습니다.
 
 ### 결제 요청
 
@@ -285,13 +298,13 @@ Response `201 Created`
 }
 ```
 
-### 주문의 결제 이력 조회
+### 주문별 결제 내역 조회
 
 ```http
 GET /api/orders/1/payments
 ```
 
-Response:
+Response `200 OK`
 
 ```json
 [
@@ -300,16 +313,8 @@ Response:
     "orderId": 1,
     "amount": 16000,
     "paymentMethod": "CARD",
-    "status": "CANCELED",
-    "paidAt": "2026-10-08T10:05:00"
-  },
-  {
-    "id": 2,
-    "orderId": 1,
-    "amount": 16000,
-    "paymentMethod": "CARD",
     "status": "COMPLETED",
-    "paidAt": "2026-10-08T10:20:00"
+    "paidAt": "2026-10-08T10:05:00"
   }
 ]
 ```

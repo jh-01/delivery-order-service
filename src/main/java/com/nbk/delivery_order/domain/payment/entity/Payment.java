@@ -19,9 +19,9 @@ public class Payment extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 결제 취소 후 재결제가 가능하므로 주문 하나에 결제 이력이 여러 건 쌓일 수 있음
+    // 주문 하나에 결제는 한 번만 가능 (동시 결제 요청도 DB unique 제약으로 차단)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
+    @JoinColumn(name = "order_id", nullable = false, unique = true)
     private Order order;
 
     @Column(nullable = false)
@@ -49,14 +49,5 @@ public class Payment extends BaseEntity {
     // 결제 금액은 주문의 총 가격으로 결정
     public static Payment of(Order order, PaymentMethod paymentMethod) {
         return new Payment(order, paymentMethod);
-    }
-
-    // 결제완료 상태일 때만 취소 가능
-    public boolean isCancelable() {
-        return this.status == PaymentStatus.COMPLETED;
-    }
-
-    public void cancel() {
-        this.status = PaymentStatus.CANCELED;
     }
 }

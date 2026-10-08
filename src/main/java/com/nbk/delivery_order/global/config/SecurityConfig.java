@@ -51,12 +51,12 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         // 사장님만
                         .requestMatchers(HttpMethod.POST, "/api/menus").hasRole("OWNER")
-                        .requestMatchers(HttpMethod.PATCH, "/api/menus/*", "/api/orders/*/status").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/menus/*").hasRole("OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/menus/*").hasRole("OWNER")
                         // 고객만
                         .requestMatchers(HttpMethod.POST, "/api/orders", "/api/payments").hasRole("CUSTOMER")
-                        .requestMatchers(HttpMethod.PATCH, "/api/orders/*/cancel", "/api/payments/*/cancel").hasRole("CUSTOMER")
                         // 그 외(회원 조회, 주문·결제 조회)는 로그인한 사용자
+                        // 주문 상태 변경은 고객(취소)·사장님(수락·배달완료) 모두 사용하므로 역할별 허용 범위는 OrderService에서 검증
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);

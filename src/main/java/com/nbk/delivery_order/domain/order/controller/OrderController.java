@@ -37,12 +37,7 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrders(authUser.userId()));
     }
 
-    @PatchMapping("/{orderId}/cancel")
-    public ResponseEntity<Void> cancelOrder(@PathVariable Long orderId, @AuthenticationPrincipal AuthUser authUser) {
-        orderService.cancelOrder(orderId, authUser.userId());
-        return ResponseEntity.noContent().build();
-    }
-
+    // 주문 취소(고객)와 상태 변경(사장님)을 함께 처리
     @PatchMapping("/{orderId}/status")
     public ResponseEntity<Void> updateOrderStatus(@PathVariable Long orderId, @AuthenticationPrincipal AuthUser authUser,
                                                   @Valid @RequestBody OrderStatusUpdateRequestDto request) {
