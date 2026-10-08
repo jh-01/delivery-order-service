@@ -14,9 +14,6 @@ public record MenuCreateRequestDto(
         @Positive(message = "가격은 0보다 커야 합니다.")
         Long price,
 
-        String description,
-
-        @NotNull(message = "사장님 ID는 필수입니다.")
-        Long ownerId
+        String description
 ) {
 }

@@ -8,6 +8,7 @@
 | --- | ------ | ---------------------------------- | -------- |
 | 회원  | POST   | `/api/members`                     | 회원가입     |
 | 회원  | GET    | `/api/members/{memberId}`          | 회원 조회    |
+| 인증  | POST   | `/api/auth/login`                  | 로그인      |
 | 메뉴  | POST   | `/api/menus`                       | 메뉴 등록    |
 | 메뉴  | GET    | `/api/menus`                       | 메뉴 목록    |
 | 메뉴  | GET    | `/api/menus/{menuId}`              | 메뉴 조회    |
@@ -23,6 +24,52 @@
 | 결제  | PATCH  | `/api/payments/{paymentId}/cancel` | 결제 취소    |
 
 ## API 명세
+
+### 인증
+
+회원가입, 로그인, 메뉴 조회를 제외한 모든 API는 로그인으로 발급받은 토큰이 필요합니다.
+요청자는 토큰에서 꺼내므로 요청 바디나 파라미터로 회원 ID를 보내지 않습니다.
+
+```http
+Authorization: Bearer {accessToken}
+```
+
+| 상황                 | 응답                 |
+| ------------------ | ------------------ |
+| 토큰 없음 / 만료 / 위조     | `401 Unauthorized` |
+| 역할이 맞지 않음 (예: 고객이 메뉴 등록) | `403 Forbidden`    |
+
+| 역할       | 가능한 API                                    |
+| -------- | ------------------------------------------ |
+| CUSTOMER | 주문 생성·취소, 결제 요청·취소                         |
+| OWNER    | 메뉴 등록·수정·삭제, 주문 상태 변경                      |
+| 공통 (로그인) | 회원 조회, 주문 목록 조회, 결제 조회·이력 조회                |
+
+#### 로그인
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+```
+
+Request
+
+```json
+{
+  "loginId": "customer01",
+  "password": "password123"
+}
+```
+
+Response `200 OK`
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+아이디가 없거나 비밀번호가 틀리면 `401 Unauthorized`
 
 ### 1. 회원
 | 기능       | Method | URL                       | 설명       |
@@ -83,8 +130,7 @@ Request
 {
   "name": "치즈버거",
   "price": 8000,
-  "description": "고소한 치즈가 들어간 버거",
-  "ownerId": 1
+  "description": "고소한 치즈가 들어간 버거"
 }
 ```
 
