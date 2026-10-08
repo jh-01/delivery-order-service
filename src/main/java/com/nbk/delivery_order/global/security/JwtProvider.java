@@ -15,6 +15,7 @@ import java.util.Optional;
 
 @Component
 public class JwtProvider {
+    private static final String LOGIN_ID_CLAIM = "loginId";
     private static final String ROLE_CLAIM = "role";
 
     private final SecretKey secretKey;
@@ -27,11 +28,13 @@ public class JwtProvider {
         this.expirationMs = expirationMs;
     }
 
-    public String createToken(Long userId, Role role) {
+    // 비밀번호 같은 민감정보는 담지 않음
+    public String createToken(Long userId, String loginId, Role role) {
         Date now = new Date();
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
+                .claim(LOGIN_ID_CLAIM, loginId)
                 .claim(ROLE_CLAIM, role.name())
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMs))

@@ -26,6 +26,6 @@ public class AuthService {
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 올바르지 않습니다."));
 
-        return new LoginResponseDto(jwtProvider.createToken(user.getId(), user.getRole()));
+        return new LoginResponseDto(jwtProvider.createToken(user.getId(), user.getLoginId(), user.getRole()));
     }
 }
