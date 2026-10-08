@@ -249,7 +249,7 @@ Request
 | 요청자      | 허용되는 변경                                              | 거절                                  |
 | -------- | ---------------------------------------------------- | ----------------------------------- |
 | CUSTOMER | 본인 주문 `ORDER_REQUESTED` → `ORDER_CANCELED`           | 남의 주문·취소 외 상태 `403`, 결제 후 취소 `409` |
-| OWNER    | 본인 메뉴 주문 `PAYMENT_COMPLETED` → `ORDER_ACCEPTED` → `DELIVERY_COMPLETED` | 남의 메뉴 주문 `403`, 그 외 변경 `409`        |
+| OWNER    | 본인 메뉴 주문 `PAYMENT_COMPLETED` → `ORDER_ACCEPTED` → `DELIVERY_COMPLETED` | 남의 메뉴 주문·취소 요청 `403`, 그 외 변경 `409` |
 
 Response `204 No Content`
 

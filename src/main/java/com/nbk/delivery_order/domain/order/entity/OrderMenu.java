@@ -1,6 +1,7 @@
 package com.nbk.delivery_order.domain.order.entity;
 
 import com.nbk.delivery_order.domain.menu.entity.Menu;
+import com.nbk.delivery_order.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -10,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "order_menus")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class OrderMenu {
+public class OrderMenu extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
