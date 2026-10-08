@@ -33,6 +33,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/menus", "/api/menus/*").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/menus/*").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/menus/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/orders").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 );

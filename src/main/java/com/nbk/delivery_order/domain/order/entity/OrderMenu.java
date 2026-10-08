@@ -26,4 +26,14 @@ public class OrderMenu {
 
     @Column(nullable = false)
     private Long quantity;
+
+    private OrderMenu(Order order, Menu menu, Long quantity) {
+        this.order = order;
+        this.menu = menu;
+        this.quantity = quantity;
+    }
+
+    public static OrderMenu of(Order order, Menu menu, Long quantity) {
+        return new OrderMenu(order, menu, quantity);
+    }
 }

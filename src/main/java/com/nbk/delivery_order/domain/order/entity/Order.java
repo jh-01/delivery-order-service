@@ -30,4 +30,15 @@ public class Order extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private OrderStatus status;
+
+    private Order(User customer, String deliveryAddress, Long totalPrice){
+        this.customer = customer;
+        this.deliveryAddress = deliveryAddress;
+        this.totalPrice = totalPrice;
+        this.status = OrderStatus.ORDER_REQUESTED;
+    }
+
+    public static Order of(User customer, String deliveryAddress, Long totalPrice) {
+        return new Order(customer, deliveryAddress, totalPrice);
+    }
 }
