@@ -32,4 +32,15 @@ public class Menu extends BaseEntity {
 
     @Column(nullable = false)
     private boolean deleted = false;
+
+    private Menu(User owner, String name, Long price, String description){
+        this.owner = owner;
+        this.name = name;
+        this.price = price;
+        this.description = description;
+    }
+
+    public static Menu of(User owner, String name, Long price, String description){
+        return new Menu(owner, name, price, description);
+    }
 }

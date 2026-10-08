@@ -1,26 +1,22 @@
 package com.nbk.delivery_order.domain.menu.dto.request;
 
-import com.nbk.delivery_order.domain.user.entity.Role;
-import com.nbk.delivery_order.domain.user.entity.User;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 public record MenuCreateRequestDto(
-        @NotBlank(message = "아이디는 필수입니다.")
-        @Size(min = 4, max = 20, message = "아이디는 4~20자여야 합니다.")
-        User owner,
-
-        @NotBlank(message = "비밀번호는 필수입니다.")
-        @Size(min = 8, max = 20, message = "비밀번호는 8~20자여야 합니다.")
+        @NotBlank(message = "메뉴 이름은 필수입니다.")
+        @Size(max = 100, message = "메뉴 이름은 100자 이하여야 합니다.")
         String name,
 
-        @NotBlank(message = "비밀번호는 필수입니다.")
+        @NotNull(message = "가격은 필수입니다.")
+        @Positive(message = "가격은 0보다 커야 합니다.")
         Long price,
 
         String description,
 
-        @NotNull(message = "회원 유형은 필수입니다.")
-        Role role
+        @NotNull(message = "사장님 ID는 필수입니다.")
+        Long ownerId
 ) {
 }

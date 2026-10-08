@@ -29,6 +29,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/members").permitAll()
                         // TODO: 로그인 구현 후 인증 필요로 변경
                         .requestMatchers(HttpMethod.GET, "/api/members/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/menus").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 );
