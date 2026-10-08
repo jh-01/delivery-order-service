@@ -1,5 +1,6 @@
 package com.nbk.delivery_order.domain.payment.dto.response;
 
+import com.nbk.delivery_order.domain.payment.entity.Payment;
 import com.nbk.delivery_order.domain.payment.entity.PaymentMethod;
 import com.nbk.delivery_order.domain.payment.entity.PaymentStatus;
 
@@ -13,4 +14,14 @@ public record PaymentResponseDto(
         PaymentStatus status,
         LocalDateTime paidAt
 ) {
+    public static PaymentResponseDto from(Payment payment) {
+        return new PaymentResponseDto(
+                payment.getId(),
+                payment.getOrder().getId(),
+                payment.getAmount(),
+                payment.getPaymentMethod(),
+                payment.getStatus(),
+                payment.getPaidAt()
+        );
+    }
 }
