@@ -1,6 +1,7 @@
 package com.nbk.delivery_order.domain.menu.service;
 
 import com.nbk.delivery_order.domain.menu.dto.request.MenuCreateRequestDto;
+import com.nbk.delivery_order.domain.menu.dto.request.MenuUpdateRequestDto;
 import com.nbk.delivery_order.domain.menu.dto.response.MenuResponse;
 import com.nbk.delivery_order.domain.menu.entity.Menu;
 import com.nbk.delivery_order.domain.menu.repository.MenuRepository;
@@ -46,6 +47,17 @@ public class MenuService {
     public MenuResponse getMenu(Long menuId) {
         Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
+
+        return MenuResponse.from(menu);
+    }
+
+    @Transactional
+    public MenuResponse updateMenu(Long menuId, MenuUpdateRequestDto request){
+        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메뉴입니다."));
+
+        // TODO: 로그인 구현 후 메뉴 소유자만 수정 가능하도록 권한 확인
+        menu.update(request.name(), request.price(), request.description());
 
         return MenuResponse.from(menu);
     }

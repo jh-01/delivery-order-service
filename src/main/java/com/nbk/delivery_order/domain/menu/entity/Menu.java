@@ -43,4 +43,10 @@ public class Menu extends BaseEntity {
     public static Menu of(User owner, String name, Long price, String description){
         return new Menu(owner, name, price, description);
     }
+
+    public void update(String name, Long price, String description){
+        this.name = name;
+        this.price = price;
+        this.description = description;
+    }
 }

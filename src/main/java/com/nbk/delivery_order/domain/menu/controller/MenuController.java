@@ -1,6 +1,7 @@
 package com.nbk.delivery_order.domain.menu.controller;
 
 import com.nbk.delivery_order.domain.menu.dto.request.MenuCreateRequestDto;
+import com.nbk.delivery_order.domain.menu.dto.request.MenuUpdateRequestDto;
 import com.nbk.delivery_order.domain.menu.dto.response.MenuResponse;
 import com.nbk.delivery_order.domain.menu.service.MenuService;
 import jakarta.validation.Valid;
@@ -30,5 +31,10 @@ public class MenuController {
     @GetMapping("/{menuId}")
     public ResponseEntity<MenuResponse> getMenu(@PathVariable Long menuId){
         return ResponseEntity.ok(menuService.getMenu(menuId));
+    }
+
+    @PatchMapping("/{menuId}")
+    public ResponseEntity<MenuResponse> updateMenu(@PathVariable Long menuId, @Valid @RequestBody MenuUpdateRequestDto request){
+        return ResponseEntity.ok(menuService.updateMenu(menuId, request));
     }
 }
