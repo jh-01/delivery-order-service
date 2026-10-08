@@ -1,6 +1,168 @@
 # 1. 서비스 소개
 
+**사장님이 메뉴를 등록하고, 고객이 주문·결제하면, 사장님이 주문을 수락해 배달까지 완료하는 배달 주문 백엔드 API**입니다.
+
+| 역할 | 할 수 있는 일 |
+| --- | --- |
+| 사장님 (`OWNER`) | 메뉴 등록·수정·삭제, 본인 메뉴에 들어온 주문 조회, 주문 수락·배달 완료 처리 |
+| 고객 (`CUSTOMER`) | 메뉴 조회, 주문 생성·취소, 카드 결제, 본인 주문·결제 내역 조회 |
+| 비회원 | 회원가입, 로그인, 메뉴 조회 |
+
+### 주요 흐름
+
+```mermaid
+sequenceDiagram
+    actor C as 고객
+    participant S as 서버
+    actor O as 사장님
+
+    O->>S: 메뉴 등록
+    C->>S: 메뉴 조회
+    C->>S: 주문 생성 (ORDER_REQUESTED)
+    C->>S: 카드 결제 (PAYMENT_COMPLETED)
+    O->>S: 주문 수락 (ORDER_ACCEPTED)
+    O->>S: 배달 완료 (DELIVERY_COMPLETED)
+```
+
+### 기술 스택
+
+| 구분 | 사용 기술 |
+| --- | --- |
+| Language | Java 21 |
+| Framework | Spring Boot 4.1, Spring Web MVC, Spring Data JPA, Spring Security, Bean Validation |
+| 인증 | JWT (jjwt 0.12), BCrypt |
+| Database | PostgreSQL |
+| Build | Gradle |
+
+### 실행 방법
+
+다음 환경변수를 설정한 뒤 실행합니다. PostgreSQL에 `delivery` 데이터베이스가 있어야 합니다.
+
+| 환경변수 | 설명 |
+| --- | --- |
+| `DB_USERNAME` | PostgreSQL 계정 |
+| `DB_PASSWORD` | PostgreSQL 비밀번호 |
+| `JWT_SECRET` | JWT 서명 키 (**32자 이상**) |
+
+```bash
+./gradlew bootRun
+```
+
 # 2. 설계
+
+## ERD
+
+![ERD](docs/image/erd.png)
+
+### 엔티티 설계 포인트
+
+- **기본키**: 모든 엔티티가 `GenerationType.IDENTITY`를 사용합니다.
+- **연관관계**: 모든 연관관계는 `@ManyToOne(fetch = LAZY)` 단방향입니다.
+  - 한 주문에 여러 메뉴를 담을 수 있도록, 주문과 메뉴의 다대다 관계를 중간 엔티티 `OrderMenu`(주문 ↔ 메뉴 + 수량)로 풀었습니다.
+- **제약 조건**: 필수값은 `nullable = false`로 지정했습니다. 서비스 검사만으로는 거의 동시에 들어온 요청을 막을 수 없어서 DB에도 unique 제약을 걸었습니다.
+  - `users.login_id`: 아이디 중복 가입 방지
+  - `payments.order_id`: 중복 결제 방지
+- **enum**: `Role`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`는 모두 `EnumType.STRING`으로 저장합니다. enum 순서가 바뀌어도 기존 데이터의 의미가 달라지지 않게 하기 위해서입니다.
+- **JPA Auditing**: 모든 엔티티가 `BaseEntity`(`@MappedSuperclass`)를 상속해서 `created_at`과 `updated_at`이 자동으로 기록됩니다.
+
+## 주문 상태
+
+```mermaid
+stateDiagram-v2
+    [*] --> ORDER_REQUESTED: 주문 생성 (고객)
+    ORDER_REQUESTED --> PAYMENT_COMPLETED: 결제 (고객)
+    ORDER_REQUESTED --> ORDER_CANCELED: 주문 취소 (고객)
+    PAYMENT_COMPLETED --> ORDER_ACCEPTED: 주문 수락 (사장님)
+    ORDER_ACCEPTED --> DELIVERY_COMPLETED: 배달 완료 (사장님)
+    ORDER_CANCELED --> [*]
+    DELIVERY_COMPLETED --> [*]
+```
+
+- 상태는 위 화살표 방향으로만 바뀝니다. 역방향 변경이나 단계를 건너뛰는 변경은 `409`입니다.
+- 취소는 결제 전(`ORDER_REQUESTED`)에만 가능합니다.
+- 상태 전이 규칙은 `Order` 엔티티(`isPayable`, `isCancelable`, `canChangeStatusTo`)가 가지고 있고, 서비스는 요청자 권한을 확인한 뒤 엔티티에 상태 변경을 맡깁니다.
+
+## 패키지 구조
+
+도메인별로 Controller(요청·응답) – Service(비즈니스 로직) – Repository(DB 접근) 3 Layer로 나눴습니다.
+
+```text
+com.nbk.delivery_order
+├── domain
+│   ├── auth       # 로그인 (JWT 발급)
+│   ├── user       # 회원가입, 회원 조회
+│   ├── menu       # 메뉴 CRUD (Soft Delete)
+│   ├── order      # 주문 생성·조회·상태 변경
+│   └── payment    # 결제, 결제 내역 조회
+│       ├── controller
+│       ├── service
+│       ├── repository
+│       ├── entity
+│       └── dto (request / response)
+└── global
+    ├── config     # SecurityConfig
+    ├── entity     # BaseEntity (JPA Auditing)
+    ├── exception  # GlobalExceptionHandler, ErrorResponse
+    └── security   # JwtProvider, JwtAuthenticationFilter, AuthUser
+```
+
+- 요청과 응답은 모두 DTO(`record`)로 주고받습니다. Entity를 그대로 응답하지 않기 때문에 비밀번호 같은 필드가 노출되지 않습니다.
+
+## 인증·인가
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Filter as JwtAuthenticationFilter
+    participant Security as SecurityConfig
+    participant Controller
+
+    Client->>Controller: POST /api/auth/login (아이디, 비밀번호)
+    Controller-->>Client: accessToken (JWT)
+
+    Client->>Filter: Authorization: Bearer {token}
+    Filter->>Filter: 서명·만료 검증, 회원 ID·역할 추출
+    Filter->>Security: 인증 정보 등록 (ROLE_CUSTOMER / ROLE_OWNER)
+    Security->>Controller: 역할 확인 후 통과
+    Controller->>Controller: @AuthenticationPrincipal로 요청자 확인
+```
+
+- **JWT**
+  - 토큰에는 회원 ID(`sub`), 로그인 아이디, 역할, 만료 시간(1시간)을 담습니다.
+  - 비밀번호 같은 민감정보는 담지 않습니다.
+  - 요청자는 요청 본문이 아니라 토큰에서 꺼냅니다. 그래서 다른 회원인 척 요청할 수 없습니다.
+- **인가는 2단계로 나눠서 검증합니다.**
+
+  | 단계 | 위치 | 검증 내용 | 실패 시 |
+  | --- | --- | --- | --- |
+  | 역할 | `SecurityConfig` | 메뉴 등록·수정·삭제는 OWNER, 주문 생성·결제는 CUSTOMER | `403` |
+  | 본인 리소스 | Service | 본인 메뉴만 수정·삭제, 본인 주문만 취소·결제, 본인 메뉴가 들어간 주문만 상태 변경 | `403` |
+
+- **비밀번호**는 BCrypt로 단방향 해시해서 저장합니다.
+
+## 주요 설계 결정
+
+| 결정 | 이유 |
+| --- | --- |
+| **금액은 서버가 계산** | 주문 총액은 DB의 메뉴 가격 × 수량으로, 결제 금액은 주문 총액으로 서버가 정합니다. 클라이언트가 보낸 금액을 믿으면 만 원짜리 주문을 백 원에 결제할 수 있게 됩니다. |
+| **메뉴는 Soft Delete** | 주문이 메뉴를 외래키로 참조하고 있어서, 실제로 지우면 FK 오류가 나거나 주문 기록이 깨집니다. `deleted` 표시만 하고, 조회·수정·주문에서는 없는 메뉴(`404`)로 처리합니다. |
+| **주문 취소도 상태 변경 API로 처리** | `/cancel` 같은 동사 URL 대신 `PATCH /api/orders/{id}/status`에 `ORDER_CANCELED`를 보냅니다. 같은 URL을 고객과 사장님이 함께 쓰므로, 역할별로 허용되는 상태는 서비스에서 검증합니다. |
+| **주문당 결제 1건 (DB unique)** | 결제 취소를 두지 않아 주문 상태가 거꾸로 돌아가는 일이 없습니다. 동시에 들어온 결제 요청도 DB 제약으로 1건만 저장됩니다. |
+| **전역 예외 처리** | `GlobalExceptionHandler`가 모든 에러를 `{ status, error, message }` 형식으로 응답합니다. Security 필터에서 나는 401·403도 같은 핸들러로 넘겨 형식을 통일했습니다. |
+
+### 에러 응답 형식
+
+```json
+{ "status": 404, "error": "NOT_FOUND", "message": "존재하지 않는 메뉴입니다." }
+```
+
+| 상태 코드 | 상황 |
+| --- | --- |
+| `400` | 요청 값 검증 실패, JSON 형식 오류, 허용되지 않는 enum 값 |
+| `401` | 토큰 없음·만료·위조, 로그인 실패 |
+| `403` | 역할이 맞지 않음, 본인 리소스가 아님 |
+| `404` | 없거나 삭제된 대상 |
+| `409` | 아이디 중복, 중복 결제, 허용되지 않는 상태 변경 |
 
 # 3. 필수 기능 12개 & api 명세
 ## 전체 API
